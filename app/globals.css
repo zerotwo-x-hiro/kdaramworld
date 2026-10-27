@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root,
+  .dark {
+    --bg-primary: 10 12 20;
+    --bg-surface: 18 22 34;
+    --bg-surface-elevated: 27 33 50;
+    --bg-scrim: 8 10 16;
+    --border-subtle: 36 44 64;
+    --border-strong: 58 70 98;
+    --text-primary: 242 244 248;
+    --text-secondary: 160 168 185;
+    --text-muted: 112 120 142;
+    --dancheong-red: 232 77 91;
+    --dancheong-blue: 84 138 248;
+    --dancheong-celadon: 64 196 168;
+    --dancheong-gold: 240 185 75;
+    --dancheong-rose: 224 122 150;
+    --tint-subtle: 255 255 255;
+    --tint-medium: 255 255 255;
+    --tint-strong: 255 255 255;
+    color-scheme: dark;
+  }
+
+  .light {
+    --bg-primary: 249 246 238;
+    --bg-surface: 255 253 248;
+    --bg-surface-elevated: 243 238 228;
+    --bg-scrim: 8 10 16;
+    --border-subtle: 226 218 202;
+    --border-strong: 194 180 158;
+    --text-primary: 24 20 26;
+    --text-secondary: 88 78 72;
+    --text-muted: 136 124 114;
+    --dancheong-red: 185 43 54;
+    --dancheong-blue: 34 76 156;
+    --dancheong-celadon: 42 135 112;
+    --dancheong-gold: 184 130 26;
+    --dancheong-rose: 172 74 98;
+    --tint-subtle: 24 20 26;
+    --tint-medium: 24 20 26;
+    --tint-strong: 24 20 26;
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  body {
+    background-color: rgb(var(--bg-primary));
+    color: rgb(var(--text-primary));
+    font-family: var(--font-pretendard), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Paper texture overlay for Hanji Day */
+  .light body {
+    background-image: radial-gradient(rgba(180, 160, 130, 0.08) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+
+  /* Subtle bokeh overlay for Seoul Night */
+  .dark body {
+    background-image: 
+      radial-gradient(circle at 15% 10%, rgba(84, 138, 248, 0.04) 0%, transparent 40%),
+      radial-gradient(circle at 85% 25%, rgba(232, 77, 91, 0.035) 0%, transparent 45%),
+      radial-gradient(circle at 50% 80%, rgba(64, 196, 168, 0.03) 0%, transparent 50%);
+  }
+}
+
+/* Skip Link for Accessibility */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  z-index: 1000;
+  padding: 0.75rem 1.25rem;
+  background: rgb(var(--dancheong-red));
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: top 0.2s ease-in-out;
+}
+.skip-link:focus {
+  top: 1rem;
+  outline: 2px solid rgb(var(--dancheong-gold));
+  outline-offset: 2px;
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print styles for Wrapped and Lists */
+@media print {
+  header, footer, nav, .no-print {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .print-page {
+    page-break-after: always;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border-subtle));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--border-strong));
+}
