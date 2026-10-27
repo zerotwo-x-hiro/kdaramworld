@@ -74,3 +74,57 @@ In legacy tracking projects (such as `github.com/localghost09/kdrama` or similar
 - `npm test`: Vitest passed (3/3 unit tests).
 - `npm run build`: Production build succeeded cleanly.
 
+---
+
+## Phase 2: Live Data Pipeline & Status Engine
+
+### 1. Database Schema & Migration Architecture
+- Created idempotent initial schema migration in `supabase/migrations/20261028000000_initial_schema.sql` covering:
+  - `dramas`: `tmdb_id`, `slug`, `title`, `title_ko`, `synopsis`, `poster_path`, `backdrop_path`, `first_air_date`, `last_air_date`, `next_episode_air_date`, `next_episode_number`, `last_episode_number`, `number_of_episodes`, `number_of_seasons`, `tmdb_status`, `networks`, `runtime`, `original_language`, `synced_at`, `sync_error`.
+  - `genres` and `drama_genres`: standard TV genre taxonomy with Korean translations.
+  - `moods` and `drama_moods`: curated Korean mood taxonomy (Healing/힐링, Melancholy/먹먹한, Romance/심쿵, Thriller/스릴러, etc.).
+  - `people` and `drama_cast`: top billed actors with Korean names and character roles.
+  - `episodes`: season, episode number, air date, title, still path.
+  - `drama_ratings`: multi-source ratings (`tmdb`, `imdb`) with score, vote count, source URL, and `fetched_at` timestamp.
+  - `app_settings`: quota tracking (`omdb_quota`) and system preferences.
+  - User and tracking tables: `users`, `user_sessions`, `collection_items`, `journal_notes` (strictly private), `reviews`, `lists`, `list_items`, `rankings`, `ranking_items`.
+- Built migration runner `scripts/migrate.ts` tracking applied versions in `schema_migrations`.
+- Applied migrations against real Postgres in development and testing.
+
+### 2. Pure Status Derivation Engine (`lib/drama-status.ts`)
+- Pure, deterministic function `deriveDramaStatus(drama, now)` operating strictly in Korea Standard Time (Asia/Seoul, UTC+9).
+- **Core Invariant Enforced:** If `first_air_date` is on or before today in KST, it is mathematically impossible to categorize the title as `'upcoming'`.
+- Accurately computes flips:
+  - `upcoming` -> `airing` on premiere date in KST.
+  - `airing` -> `ended` when `tmdb_status === 'Ended'` or all known episodes have aired.
+
+### 3. TMDB Ingestion & Sync Engine (`lib/sync/tmdb-sync.ts`)
+- Server-only background sync client connecting to TMDB API:
+  - `/discover/tv` with `with_origin_country=KR`, `with_original_language=ko`, paginated.
+  - `/tv/on_the_air` to capture live broadcast schedules and next episode dates.
+  - Detailed `/tv/{id}` + credits + season episodes.
+- Exponential backoff retry handler (`fetchTmdbWithRetry`) handling HTTP 429 (rate limits) and HTTP 5xx errors.
+- Soft error handling: logs sync errors into `dramas.sync_error` without crashing pages or terminating the sync batch.
+
+### 4. IMDb Ratings via OMDb API (`lib/sync/imdb-ratings.ts`)
+- Mapped from TMDB's `external_ids.imdb_id`.
+- Rate-limiting rules:
+  - Titles refreshed at most once per 7 days (`fetched_at < NOW() - INTERVAL '7 days'`).
+  - Stored independently as `source = 'imdb'` in `drama_ratings` (never averaged with TMDB).
+  - Daily quota enforcement: caps at 900 calls/day (under free tier 1,000 threshold), stores usage in `app_settings.omdb_quota`, halts cleanly and resumes next run.
+- Optional TVmaze cross-check implemented in `lib/sync/tvmaze.ts`.
+
+### 5. Automated Cron & Health Endpoints
+- `POST /api/cron/sync-dramas`: Protected by `Authorization: Bearer ${CRON_SECRET}`, performs incremental catalog sync and revalidates cached tags.
+- `POST /api/cron/sync-ratings`: Protected by `Authorization: Bearer ${CRON_SECRET}`, syncs oldest IMDb ratings within quota.
+- `GET /api/health`: Healthcheck endpoint querying database and returning `{ ok: true, dramas: count }` or 503 on database failure.
+- Configured daily Vercel cron in `vercel.json` and 6-hour workflow in `.github/workflows/sync.yml`.
+
+### 6. Artwork & Verification
+- `DramaPoster`: TMDB image component with Next.js image optimization, responsive sizes, and traditional K-theme lattice fallback plate (no fake posters).
+- `RatingChip`: Explicit source labeling ("TMDB 8.4", "IMDb 8.1", "Not rated").
+- Verified against real Docker PostgreSQL test database (`TEST_DATABASE_URL`):
+  - Vitest test suite: 23 passed across status boundary flips, mock 429/500 retries, real Postgres drama ingestion, and OMDb quota limits.
+  - `npm run typecheck` and `npm run build` passed cleanly.
+
+

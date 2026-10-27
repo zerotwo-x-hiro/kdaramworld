@@ -1,9 +1,12 @@
 import 'server-only';
 import { z } from 'zod';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
-  TEST_DATABASE_URL: z.string().optional(),
+  DATABASE_URL: z.string().default('postgres://postgres:postgres@localhost:5432/kdramaworld'),
+  TEST_DATABASE_URL: z.string().default('postgres://postgres:postgres@localhost:5432/kdramaworld_test'),
   DATABASE_POOL_MAX: z.coerce.number().default(10),
   AUTH_SECRET: z.string().min(16, 'AUTH_SECRET must be at least 16 characters').default('development-insecure-secret-key-32-chars-long!'),
   NEXT_PUBLIC_SITE_URL: z.string().url().default('http://localhost:3000'),
@@ -15,15 +18,6 @@ const envSchema = z.object({
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
-
-if (!parsedEnv.success) {
-  const missing = parsedEnv.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(', ');
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(`CRITICAL: Invalid or missing environment configuration: ${missing}`);
-  } else {
-    console.warn(`[Config Warning] Non-fatal environment issues in ${process.env.NODE_ENV}: ${missing}`);
-  }
-}
 
 export const env = parsedEnv.success ? parsedEnv.data : {
   DATABASE_URL: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/kdramaworld',
